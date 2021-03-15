@@ -1,13 +1,13 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from protostar.datamodules import ProtostarDataModule
-from protostar.loggers import NeptuneLogger
-from protostar.models import ProtostarModel
-from protostar.trainer import Trainer
-from protostar.utils.randomer import Randomer
+from sonata.datamodules import ProtostarDataModule
+from sonata.loggers import NeptuneLogger
+from sonata.models import ProtostarModel
+from sonata.trainer import Trainer
+from sonata.utils.randomer import Randomer
 
-from configs.protostar_config import (
+from configs.sonata_config import (
     CommonArguments,
     DataArguments,
     TrainArguments,

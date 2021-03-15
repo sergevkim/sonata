@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
 from torchaudio.transforms import MelSpectrogram
 
-from protostar.models import BaseModule
+from sonata.models import BaseModule
 
 
 class ProtostarModel(BaseModule):

@@ -1,7 +1,7 @@
 import neptune
 from torch import Tensor
 
-from protostar.loggers import BaseLogger
+from sonata.loggers import BaseLogger
 
 
 class NeptuneLogger(BaseLogger):

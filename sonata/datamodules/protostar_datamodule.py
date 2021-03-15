@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader
 
-from protostar.datamodules import BaseDataModule
+from sonata.datamodules import BaseDataModule
 
 
 class ProtostarDataset(Dataset):
