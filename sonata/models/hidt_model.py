@@ -1,6 +1,6 @@
 import torch
 from torch import Tensor
-from torch.nn import MSELoss
+from torch.nn import CrossEntropyLoss, L1Loss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
@@ -30,7 +30,16 @@ class HiDTModel(BaseModule):
         self.generator = Generator()
         self.discriminator = Discriminator()
 
-        self.criterion_dist = MSELoss()
+        self.criterion_dist = MSELoss() #KL? distance between batch dist and standart normal
+        self.criterion_rec = L1Loss() #+
+        self.criterion_seg = CrossEntropyLoss() #+
+        self.criterion_c = L1Loss() #+
+        self.criterion_s = L1Loss() #+
+        self.criterion_cyc = L1Loss() #+
+        self.criterion_seg_r = CrossEntropyLoss() #+
+        self.criterion_c_r = L1Loss() #+
+        self.criterion_s_r = L1Loss() #+
+        self.criterion_rec_r = L1Loss() #+
 
     def forward(
             self,
