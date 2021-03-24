@@ -9,10 +9,11 @@ from torch.optim.optimizer import Optimizer
 
 from sonata.models import BaseModule
 from sonata.models.hidt_components import (
+    ConditionalDiscriminator,
     ContentEncoder,
     Decoder,
-    Discriminator,
     StyleEncoder,
+    UnconditionalDiscriminator,
 )
 from sonata.utils import ParametersCounter
 
