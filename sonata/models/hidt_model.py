@@ -1,6 +1,8 @@
+import pdb
+
 import torch
 from torch import Tensor
-from torch.nn import CrossEntropyLoss, L1Loss
+from torch.nn import CrossEntropyLoss, L1Loss, MSELoss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
@@ -159,5 +161,6 @@ if __name__ == '__main__':
         model=model,
         trainable=True,
     )
+    pdb.set_trace()
     print(n_params)
 
