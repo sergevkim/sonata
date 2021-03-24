@@ -1,5 +1,5 @@
 from .content_encoder import ContentEncoder
+from .decoder import Decoder
 from .discriminator import Discriminator
-from .generator import Generator
 from .style_encoder import StyleEncoder
 

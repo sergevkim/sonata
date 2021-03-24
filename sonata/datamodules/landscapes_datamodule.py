@@ -46,7 +46,7 @@ class LandscapesDataModule(BaseDataModule):
     def setup(
             self,
             val_ratio: float = 0.1,
-            new_size: int = 128,
+            new_size: int = 256,
         ):
         data_transform = [
             Resize(new_size, new_size),

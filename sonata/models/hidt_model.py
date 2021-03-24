@@ -10,8 +10,8 @@ from torch.optim.optimizer import Optimizer
 from sonata.models import BaseModule
 from sonata.models.hidt_components import (
     ContentEncoder,
+    Decoder,
     Discriminator,
-    Generator,
     StyleEncoder,
 )
 from sonata.utils import ParametersCounter
