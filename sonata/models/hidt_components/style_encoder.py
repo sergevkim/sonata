@@ -1,3 +1,4 @@
+import torch
 from einops.layers.torch import Rearrange
 from torch.nn import (
     AdaptiveAvgPool2d,
@@ -59,4 +60,8 @@ if __name__ == '__main__':
         trainable=True,
     )
     print(n_params)
+
+    inputs = torch.randn(4, 3, 256, 256)
+    outputs = model(inputs)
+    print(outputs.shape)
 

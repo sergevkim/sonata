@@ -76,7 +76,6 @@ class ResBlock(Module):
             in_channels: int,
             out_channels: int,
             kernel_size: int = 3,
-            stride: int = 1,
             padding: int = 1,
         ):
         super().__init__()
@@ -85,7 +84,6 @@ class ResBlock(Module):
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
-                stride=stride,
                 padding=padding,
                 bias=False,
                 instance_norm=True,
@@ -94,7 +92,6 @@ class ResBlock(Module):
                 in_channels=out_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
-                stride=stride,
                 padding=padding,
                 bias=False,
                 instance_norm=True,
@@ -103,7 +100,7 @@ class ResBlock(Module):
         )
 
     def forward(self, x):
-        x = x + self.residual_block(x)
+        x = x + self.res_block(x)
 
         return x
 
@@ -134,11 +131,7 @@ class AdaSkipBlock(Module):
             out_channels,
         ):
         super().__init__()
-        self.ada = AdaIN
-        self.dense = ConvBlock(
-            in_channels=in_channels*2,
-            out_channels=in_channels,
-        )
+        self.in_channels = in_channels
         self.ada_creator = nn.Sequential(
             Linear(
                 in_features=3,
@@ -153,10 +146,15 @@ class AdaSkipBlock(Module):
                 out_features=256,
             ),
         )
+        self.ada = AdaIN
+        self.dense = ConvBlock(
+            in_channels=in_channels*2,
+            out_channels=in_channels,
+        )
 
     def forward(self, content, style, hook):
         x = self.ada_creator(style)
-        ada_params = x.view((x.shape[0], in_channels, -1))
+        ada_params = x.view((x.shape[0], self.in_channels, -1))
         ada = self.ada(hook, ada_params)
         combined = torch.cat([content, ada], dim=1)
         x = self.dense(combined)
@@ -176,9 +174,15 @@ class AdaResBlock(Module):
             in_channels=in_channels,
             out_channels=in_channels,
         )
-        self.res_block = ResBlock(
-            in_channels=in_channels,
-            out_channels=out_channels,
+        self.res_block = Sequential(
+            ConvBlock(
+                in_channels=in_channels,
+                out_channels=out_channels,
+            ),
+            ResBlock(
+                in_channels=out_channels,
+                out_channels=out_channels,
+            ),
         )
         if in_channels != out_channels:
             self.skip = ConvBlock(

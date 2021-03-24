@@ -165,3 +165,7 @@ if __name__ == '__main__':
     pdb.set_trace()
     print(n_params)
 
+    inputs = torch.randn(4, 3, 256, 256)
+    outputs = model(inputs)
+    print(outputs.shape)
+

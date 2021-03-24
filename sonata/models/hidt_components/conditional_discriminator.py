@@ -6,7 +6,7 @@ from torch.nn import (
     Sequential,
 )
 
-from sonata.models.blocks import ResBlock
+from sonata.models.blocks import ConvBlock, ResBlock
 from sonata.utils import ParametersCounter
 
 
@@ -16,12 +16,20 @@ class ConditionalDiscriminator(Module):
         super().__init__()
         self.num_feat = num_feat
         self.activation = ReLU()
-        self.blocks = [ResBlock(3, num_feat)]
+        self.blocks = [
+            ConvBlock(3, num_feat)
+        ]
         self.blocks.extend([
-            ResBlock(
-                num_feat*(2**i),
-                num_feat*(2**(i+1)),
-                stride=2,
+            Sequential(
+                ResBlock(
+                    num_feat*(2**i),
+                    num_feat*(2**i),
+                ),
+                ConvBlock(
+                    num_feat*(2**i),
+                    num_feat*(2**(i+1)),
+                    stride=2,
+                ),
             ) for i in range(4)
         ])
 
@@ -60,4 +68,8 @@ if __name__ == '__main__':
         trainable=True,
     )
     print(n_params)
+
+    inputs = torch.randn(4, 3, 256, 256)
+    outputs = model(inputs)
+    print(outputs.shape)
 

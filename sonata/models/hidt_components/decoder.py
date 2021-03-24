@@ -1,3 +1,4 @@
+import torch
 from torch.nn import (
     Module,
     Sequential,
@@ -23,20 +24,24 @@ class Decoder(Module):
         self.conv_block_3 = ConvBlock(
             in_channels=64,
             out_channels=32,
+            kernel_size=4,
             stride=2,
+            transposed=True,
         )
         self.ada_res_block_4 = AdaResBlock(
             in_channels=32,
-            out_channels=32,
+            out_channels=16,
         )
         self.ada_res_block_5 = AdaResBlock(
-            in_channels=32,
+            in_channels=16,
             out_channels=16,
         )
         self.conv_block_6 = ConvBlock(
             in_channels=16,
             out_channels=8,
+            kernel_size=4,
             stride=2,
+            transposed=True,
         )
         self.ada_res_block_7 = AdaResBlock(
             in_channels=8,
@@ -68,3 +73,13 @@ if __name__ == '__main__':
     )
     print(n_params)
 
+    inputs = torch.randn(4, 128, 64, 64)
+    style = torch.randn(4, 3)
+    hooks = [
+        torch.randn(4, 8, 256, 256),
+        torch.randn(4, 16, 128, 128),
+        torch.randn(4, 32, 128, 128),
+        torch.randn(4, 128, 64, 64),
+    ]
+    outputs = model(inputs, style, hooks)
+    print(outputs.shape)

@@ -1,3 +1,4 @@
+import torch
 from torch.nn import (
     Flatten,
     Linear,
@@ -22,7 +23,12 @@ class UnconditionalDiscriminator(Module):
             ),
             ResBlock(
                 in_channels=64,
+                out_channels=64,
+            ),
+            ConvBlock(
+                in_channels=64,
                 out_channels=128,
+                stride=2,
             ),
             ResBlock(
                 in_channels=128,
@@ -30,10 +36,24 @@ class UnconditionalDiscriminator(Module):
             ),
             ConvBlock(
                 in_channels=128,
+                out_channels=64,
+                stride=2,
+            ),
+            ResBlock(
+                in_channels=64,
+                out_channels=64,
+            ),
+            ConvBlock(
+                in_channels=64,
+                out_channels=32,
+                stride=2,
+            ),
+            ConvBlock(
+                in_channels=32,
                 out_channels=1,
             ),
             Flatten(),
-            Linear(128, 1),
+            Linear(256, 1),
         )
 
     def forward(
@@ -52,4 +72,8 @@ if __name__ == '__main__':
         trainable=True,
     )
     print(n_params)
+
+    inputs = torch.randn(4, 3, 256, 256)
+    outputs = model(inputs)
+    print(outputs.shape)
 

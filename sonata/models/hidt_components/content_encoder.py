@@ -1,3 +1,4 @@
+import torch
 from torch.nn import (
     Module,
     Sequential,
@@ -8,11 +9,17 @@ from sonata.utils import ParametersCounter
 
 
 class ContentEncoder(Module):
-    def __init__(self, ni=3):
+    def __init__(self):
         super().__init__()
-        self.res_block_1 = ResBlock(
-            in_channels=3,
-            out_channels=8,
+        self.res_block_1 = Sequential(
+            ConvBlock(
+                in_channels=3,
+                out_channels=8,
+            ),
+            ResBlock(
+                in_channels=8,
+                out_channels=8,
+            )
         )
         self.conv_block_2 = ConvBlock(
             in_channels=8,
@@ -23,18 +30,30 @@ class ContentEncoder(Module):
             in_channels=16,
             out_channels=16,
         )
-        self.res_block_4 = ResBlock(
-            in_channels=16,
-            out_channels=32,
+        self.res_block_4 = Sequential(
+            ConvBlock(
+                in_channels=16,
+                out_channels=32,
+            ),
+            ResBlock(
+                in_channels=32,
+                out_channels=32,
+            ),
         )
         self.conv_block_5 = ConvBlock(
             in_channels=32,
             out_channels=64,
             stride=2,
         )
-        self.res_block_6 = ResBlock(
-            in_channels=64,
-            out_channels=128,
+        self.res_block_6 = Sequential(
+            ConvBlock(
+                in_channels=64,
+                out_channels=128,
+            ),
+            ResBlock(
+                in_channels=128,
+                out_channels=128,
+            ),
         )
         self.conv_block_7 = ConvBlock(
             in_channels=128,
@@ -67,3 +86,7 @@ if __name__ == '__main__':
     )
     print(n_params)
 
+    inputs = torch.randn(4, 3, 256, 256)
+    outputs = model(inputs)
+    print(outputs[0].shape)
+    print([hook.shape for hook in outputs[1]])
