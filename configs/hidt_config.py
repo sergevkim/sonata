@@ -19,7 +19,7 @@ class CommonArguments:
 
 @dataclass
 class DataArguments:
-    batch_size: int = 2
+    batch_size: int = 4
     data_path: Path = Path('./data/archive')
     new_size: int = 256
     num_workers: int = 4
@@ -31,7 +31,7 @@ class TrainArguments:
     learning_rate: float = 3e-4
     max_epoch: int = 10
     one_batch_overfit: int = 1
-    save_period: int = 20
+    save_period: int = 1
     scheduler_gamma: float = 0.5
     scheduler_step_size: int = 10
 
