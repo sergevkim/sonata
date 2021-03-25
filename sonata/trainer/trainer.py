@@ -10,9 +10,9 @@ from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
-from cface.datamodules import BaseDataModule
-from cface.loggers import BaseLogger
-from cface.models import BaseModule
+from sonata.datamodules import BaseDataModule
+from sonata.loggers import BaseLogger
+from sonata.models import BaseModule
 
 
 class Trainer:
