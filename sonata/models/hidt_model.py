@@ -102,7 +102,7 @@ class HiDTModel(BaseModule):
             loss_cyc = self.criterion_cyc(x_hat_tilde, x)
 
             #noise branch
-            s_r = torch.randn(len(x), 3)
+            s_r = torch.randn(len(x), 3).to(self.device)
             x_r, m_r = self.generator(
                 content=c,
                 style=s_r,
@@ -252,8 +252,14 @@ class HiDTModel(BaseModule):
                 s_r.clone().detach(),
             )
             loss_adv_r = (
-                MetricCalculator.criterion_adv(du_x_r, torch.zeros_like(du_x_r)) +
-                MetricCalculator.criterion_adv(dc_x_r, torch.zeros_like(dc_x_r))
+                MetricCalculator.criterion_adv(
+                    du_x_r,
+                    torch.zeros_like(du_x_r),
+                ) +
+                MetricCalculator.criterion_adv(
+                    dc_x_r,
+                    torch.zeros_like(dc_x_r),
+                )
             )
             du_x = self.uncond_discriminator(x)
             dc_x = self.cond_discriminator(
@@ -265,7 +271,7 @@ class HiDTModel(BaseModule):
                 MetricCalculator.criterion_adv(dc_x, torch.ones_like(dc_x))
             )
 
-            loss = loss_adv_hat + loss_adv_r + loss_add_real
+            loss = loss_adv_hat + loss_adv_r + loss_adv_real
 
             info = {
                 'loss': loss,
