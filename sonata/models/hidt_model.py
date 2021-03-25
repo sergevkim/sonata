@@ -265,7 +265,7 @@ class HiDTModel(BaseModule):
                 MetricCalculator.criterion_adv(dc_x, torch.ones_like(dc_x))
             )
 
-            loss = loss_adv_hat + loss_adv_r + loss_add_real
+            loss = loss_adv_hat + loss_adv_r + loss_adv_real
 
             info = {
                 'loss': loss,
