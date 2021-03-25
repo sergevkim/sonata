@@ -18,6 +18,10 @@ from sonata.models.hidt_components import (
 from sonata.utils import ParametersCounter
 
 
+def criterion_adv(val, targ):
+    return 0.5 * torch.mean((val - targ)**2)
+
+
 class HiDTModel(BaseModule):
     def __init__(
             self,
@@ -30,8 +34,9 @@ class HiDTModel(BaseModule):
 
         self.content_encoder = ContentEncoder()
         self.style_encoder = StyleEncoder()
-        self.generator = Generator()
-        self.discriminator = Discriminator()
+        self.generator = Decoder()
+        self.cond_discriminator = ConditionalDiscriminator()
+        self.uncond_discriminator = UnconditionalDiscriminator()
 
         self.criterion_dist = MSELoss() #KL? distance between batch dist and standart normal
         self.criterion_rec = L1Loss() #+
@@ -62,12 +67,13 @@ class HiDTModel(BaseModule):
 
         if optimizer_idx == 0: #generator step
             #autoencoding branch
-            c = self.content_encoder(x)
+            c, h = self.content_encoder(x)
             s = self.style_encoder(x)
             loss_dist = self.criterion_dist(s) #TODO check that s distribution looks like N(0, I)
             x_tilde, m = self.generator(
                 content=c,
                 style=s,
+                hooks=h,
             )
             loss_rec = self.criterion_rec(x_tilde, x)
 
@@ -76,22 +82,26 @@ class HiDTModel(BaseModule):
             x_hat, m_hat = self.generator(
                 content=c,
                 style=s_prime,
+                hooks=h,
             )
+
             loss_seg = self.criterion_seg(m_hat, m)
-            c_hat = self.content_encoder(x_hat)
+            c_hat, h_hat = self.content_encoder(x_hat)
             s_hat = self.style_encoder(x_hat)
             loss_c = self.criterion_c(c_hat, c)
             loss_s = self.criterion_s(s_hat, s_prime)
 
-            c_prime = self.content_encoder(x_prime)
+            c_prime, h_prime = self.content_encoder(x_prime)
             x_prime_hat, _ = self.generator(
                 content=c_prime,
                 style=s,
+                hooks=h_prime,
             )
             s_prime_hat = self.style_encoder(x_prime_hat)
-            x_hat_tilde = self.generator(
+            x_hat_tilde, _ = self.generator(
                 content=c_hat,
                 style=s_prime_hat,
+                hooks=h_hat,
             )
             loss_cyc = self.criterion_cyc(x_hat_tilde, x)
 
@@ -100,17 +110,44 @@ class HiDTModel(BaseModule):
             x_r, m_r = self.generator(
                 content=c,
                 style=s_r,
+                hooks=h,
             )
             loss_seg_r = self.criterion_seg_r(m_r, m)
-            c_r_tilde = self.content_encoder(x_r)
+            c_r_tilde, h_r_tilde, = self.content_encoder(x_r)
             s_r_tilde = self.style_encoder(x_r)
             loss_c_r = self.criterion_c_r(c_r_tilde, c)
             loss_s_r = self.criterion_s_r(s_r_tilde, s_r)
             x_r_tilde, _ = self.generator(
                 content=c_r_tilde,
                 style=s_r_tilde,
+                hooks=h_r_tilde,
             )
             loss_rec_r = self.criterion_rec_r(x_r_tilde, x_r)
+
+            du_x_hat = self.uncond_discriminator(x_hat)
+            #du_x_prime_hat = self.uncond_discriminator(x_prime_hat)
+            dc_x_hat = self.cond_discriminator(
+                x_hat,
+                s_prime.clone().detach(),
+            )
+            #dc_x_prime_hat = self.cond_discriminator(
+            #    x_prime_hat,
+            #    s.clone().detach(),
+            #)
+            loss_adv = (
+                criterion_adv(du_x_hat, torch.ones_like(du_x_hat)) +
+                criterion_adv(dc_x_hat, torch.ones_like(dc_x_hat))
+            )
+
+            du_x_r = self.uncond_discriminator(x_r)
+            dc_x_r = self.cond_discriminator(
+                x_r,
+                s_r.clone().detach(),
+            )
+            loss_adv_r = (
+                criterion_adv(du_x_r, torch.ones_like(du_x_r)) +
+                criterion_adv(dc_x_r, torch.ones_like(dc_x_r))
+            )
 
             loss_terms = [
                 loss_adv + loss_adv_r,
@@ -164,8 +201,4 @@ if __name__ == '__main__':
     )
     pdb.set_trace()
     print(n_params)
-
-    inputs = torch.randn(4, 3, 256, 256)
-    outputs = model(inputs)
-    print(outputs.shape)
 
