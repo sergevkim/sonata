@@ -40,7 +40,7 @@ class LandscapesDataset(Dataset):
         if self.transform:
             image = self.transform(image=image)['image']
 
-        random_idx = randint(0, len(self.filenames))
+        random_idx = randint(0, len(self.filenames) - 1)
         random_filename = self.filenames[random_idx]
         random_image = cv2.imread(random_filename)
         random_image = cv2.cvtColor(random_image, cv2.COLOR_BGR2RGB)
