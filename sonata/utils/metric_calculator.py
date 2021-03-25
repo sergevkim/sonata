@@ -129,10 +129,12 @@ class MetricCalculator:
         cov_m = cls.cov(styles)
         cov_diag = torch.diag(cov_m)
 
+        device = style.device
+
         loss = (
-            cls.one_norm(smeans, torch.ones(1)) +
-            cls.one_norm(cov_m, torch.eye(cov_m.shape[0])) +
-            cls.one_norm(cov_diag, torch.ones(cov_diag.shape))
+            cls.one_norm(smeans, torch.ones(1).to(device)) +
+            cls.one_norm(cov_m, torch.eye(cov_m.shape[0]).to(device)) +
+            cls.one_norm(cov_diag, torch.ones(cov_diag.shape).to(device))
         )
 
         return loss

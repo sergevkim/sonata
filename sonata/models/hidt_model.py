@@ -80,7 +80,6 @@ class HiDTModel(BaseModule):
                 style=s_prime,
                 hooks=h,
             )
-            #TODO remove print(c.shape, s_prime.shape, h)
 
             loss_seg = 0#self.criterion_seg(m_hat, m)
             c_hat, h_hat = self.content_encoder(x_hat)
@@ -219,7 +218,7 @@ class HiDTModel(BaseModule):
             )
 
             #noise branch
-            s_r = torch.randn(len(x), 3)
+            s_r = torch.randn(len(x), 3).to(self.device)
             x_r, m_r = self.generator(
                 content=c,
                 style=s_r,
