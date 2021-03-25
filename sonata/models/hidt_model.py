@@ -252,8 +252,14 @@ class HiDTModel(BaseModule):
                 s_r.clone().detach(),
             )
             loss_adv_r = (
-                MetricCalculator.criterion_adv(du_x_r, torch.zeros_like(du_x_r)) +
-                MetricCalculator.criterion_adv(dc_x_r, torch.zeros_like(dc_x_r))
+                MetricCalculator.criterion_adv(
+                    du_x_r,
+                    torch.zeros_like(du_x_r),
+                ) +
+                MetricCalculator.criterion_adv(
+                    dc_x_r,
+                    torch.zeros_like(dc_x_r),
+                )
             )
             du_x = self.uncond_discriminator(x)
             dc_x = self.cond_discriminator(
