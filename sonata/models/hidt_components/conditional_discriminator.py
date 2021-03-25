@@ -72,7 +72,7 @@ class ConditionalDiscriminator(Module):
 
     def forward(self, x, y=None):
         x = self.block_1(x)
-        x - self.blocks(x)
+        x = self.blocks(x)
 
         h = self.activation(x)
         h = torch.sum(h, dim=(2, 3))

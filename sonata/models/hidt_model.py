@@ -161,9 +161,6 @@ class HiDTModel(BaseModule):
                 loss_s_r,
                 loss_dist,
             ]
-            k = len(loss_terms)
-            for loss_term in loss_terms:
-                print(loss_term.item())
             lambdas = [
                 5,
                 2,
@@ -175,7 +172,7 @@ class HiDTModel(BaseModule):
             ] #TODO seg
 
             loss = 0
-            for i in range(k):
+            for i, _ in enumerate(loss_terms):
                 loss += lambdas[i] * loss_terms[i]
 
             info = {
