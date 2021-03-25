@@ -102,7 +102,7 @@ class HiDTModel(BaseModule):
             loss_cyc = self.criterion_cyc(x_hat_tilde, x)
 
             #noise branch
-            s_r = torch.randn(len(x), 3)
+            s_r = torch.randn(len(x), 3).to(self.device)
             x_r, m_r = self.generator(
                 content=c,
                 style=s_r,
