@@ -1,5 +1,3 @@
-import pdb
-
 import torch
 from torch import Tensor
 from torch.nn import CrossEntropyLoss, L1Loss, MSELoss
@@ -15,11 +13,7 @@ from sonata.models.hidt_components import (
     StyleEncoder,
     UnconditionalDiscriminator,
 )
-from sonata.utils import ParametersCounter
-
-
-def criterion_adv(val, targ):
-    return 0.5 * torch.mean((val - targ)**2)
+from sonata.utils import MetricCalculator, ParametersCounter
 
 
 class HiDTModel(BaseModule):
@@ -63,13 +57,13 @@ class HiDTModel(BaseModule):
         ):
         x = batch
         x = x.to(self.device)
-        x_prime = x_prime.to(self.device) #TODO think about sampling
+        x_prime = x.to(self.device) #TODO think about sampling
 
         if optimizer_idx == 0: #generator step
             #autoencoding branch
             c, h = self.content_encoder(x)
             s = self.style_encoder(x)
-            loss_dist = self.criterion_dist(s) #TODO check that s distribution looks like N(0, I)
+            loss_dist = MetricCalculator.criterion_dist(s)
             x_tilde, m = self.generator(
                 content=c,
                 style=s,
@@ -77,7 +71,7 @@ class HiDTModel(BaseModule):
             )
             loss_rec = self.criterion_rec(x_tilde, x)
 
-            #swapping branch TODO discriminator
+            #swapping branch
             s_prime = self.style_encoder(x_prime)
             x_hat, m_hat = self.generator(
                 content=c,
@@ -85,7 +79,7 @@ class HiDTModel(BaseModule):
                 hooks=h,
             )
 
-            loss_seg = self.criterion_seg(m_hat, m)
+            loss_seg = 0#self.criterion_seg(m_hat, m)
             c_hat, h_hat = self.content_encoder(x_hat)
             s_hat = self.style_encoder(x_hat)
             loss_c = self.criterion_c(c_hat, c)
@@ -105,14 +99,14 @@ class HiDTModel(BaseModule):
             )
             loss_cyc = self.criterion_cyc(x_hat_tilde, x)
 
-            #noise branch TODO discriminator
-            s_r = torch.randn(size=None) #TODO think about size
+            #noise branch
+            s_r = torch.randn(len(x), 3)
             x_r, m_r = self.generator(
                 content=c,
                 style=s_r,
                 hooks=h,
             )
-            loss_seg_r = self.criterion_seg_r(m_r, m)
+            loss_seg_r = 0#self.criterion_seg_r(m_r, m)
             c_r_tilde, h_r_tilde, = self.content_encoder(x_r)
             s_r_tilde = self.style_encoder(x_r)
             loss_c_r = self.criterion_c_r(c_r_tilde, c)
@@ -124,6 +118,7 @@ class HiDTModel(BaseModule):
             )
             loss_rec_r = self.criterion_rec_r(x_r_tilde, x_r)
 
+            #all discriminators
             du_x_hat = self.uncond_discriminator(x_hat)
             #du_x_prime_hat = self.uncond_discriminator(x_prime_hat)
             dc_x_hat = self.cond_discriminator(
@@ -135,8 +130,14 @@ class HiDTModel(BaseModule):
             #    s.clone().detach(),
             #)
             loss_adv = (
-                criterion_adv(du_x_hat, torch.ones_like(du_x_hat)) +
-                criterion_adv(dc_x_hat, torch.ones_like(dc_x_hat))
+                MetricCalculator.criterion_adv(
+                    du_x_hat,
+                    torch.ones_like(du_x_hat)
+                ) +
+                MetricCalculator.criterion_adv(
+                    dc_x_hat,
+                    torch.ones_like(dc_x_hat),
+                )
             )
 
             du_x_r = self.uncond_discriminator(x_r)
@@ -145,8 +146,8 @@ class HiDTModel(BaseModule):
                 s_r.clone().detach(),
             )
             loss_adv_r = (
-                criterion_adv(du_x_r, torch.ones_like(du_x_r)) +
-                criterion_adv(dc_x_r, torch.ones_like(dc_x_r))
+                MetricCalculator.criterion_adv(du_x_r, torch.ones_like(du_x_r)) +
+                MetricCalculator.criterion_adv(dc_x_r, torch.ones_like(dc_x_r))
             )
 
             loss_terms = [
@@ -199,6 +200,9 @@ if __name__ == '__main__':
         model=model,
         trainable=True,
     )
-    pdb.set_trace()
     print(n_params)
+
+    inputs = torch.randn(4, 3, 256, 256)
+    outputs = model.training_step(inputs, 0, 0)
+    print(outputs)
 

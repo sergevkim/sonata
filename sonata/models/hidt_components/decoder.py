@@ -62,7 +62,7 @@ class Decoder(Module):
         x = self.conv_block_6(x)
         x = self.ada_res_block_7(x, style, hooks[0])
 
-        return x
+        return x, None
 
 
 if __name__ == '__main__':
