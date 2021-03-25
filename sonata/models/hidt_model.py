@@ -123,11 +123,11 @@ class HiDTModel(BaseModule):
 
             #all discriminators
             du_x_hat = self.uncond_discriminator(x_hat)
-            #du_x_prime_hat = self.uncond_discriminator(x_prime_hat)
             dc_x_hat = self.cond_discriminator(
                 x_hat,
                 s_prime.clone().detach(),
             )
+            #du_x_prime_hat = self.uncond_discriminator(x_prime_hat)
             #dc_x_prime_hat = self.cond_discriminator(
             #    x_prime_hat,
             #    s.clone().detach(),
@@ -168,6 +168,7 @@ class HiDTModel(BaseModule):
             lambdas = [
                 5,
                 2,
+                #3,
                 1,
                 0.1,
                 4,
@@ -185,7 +186,97 @@ class HiDTModel(BaseModule):
             return info
 
         if optimizer_idx == 1: #discriminator step
-            pass
+            c, h = self.content_encoder(x)
+            s = self.style_encoder(x)
+            x_tilde, m = self.generator(
+                content=c,
+                style=s,
+                hooks=h,
+            )
+
+            #swapping branch
+            s_prime = self.style_encoder(x_prime)
+            x_hat, m_hat = self.generator(
+                content=c,
+                style=s_prime,
+                hooks=h,
+            )
+
+            c_hat, h_hat = self.content_encoder(x_hat)
+            s_hat = self.style_encoder(x_hat)
+
+            c_prime, h_prime = self.content_encoder(x_prime)
+            x_prime_hat, _ = self.generator(
+                content=c_prime,
+                style=s,
+                hooks=h_prime,
+            )
+            s_prime_hat = self.style_encoder(x_prime_hat)
+            x_hat_tilde, _ = self.generator(
+                content=c_hat,
+                style=s_prime_hat,
+                hooks=h_hat,
+            )
+
+            #noise branch
+            s_r = torch.randn(len(x), 3)
+            x_r, m_r = self.generator(
+                content=c,
+                style=s_r,
+                hooks=h,
+            )
+            c_r_tilde, h_r_tilde, = self.content_encoder(x_r)
+            s_r_tilde = self.style_encoder(x_r)
+            x_r_tilde, _ = self.generator(
+                content=c_r_tilde,
+                style=s_r_tilde,
+                hooks=h_r_tilde,
+            )
+
+            #all discriminators
+            du_x_hat = self.uncond_discriminator(x_hat)
+            dc_x_hat = self.cond_discriminator(
+                x_hat,
+                s_prime.clone().detach(),
+            )
+            loss_adv_hat = (
+                MetricCalculator.criterion_adv(
+                    du_x_hat,
+                    torch.zeros_like(du_x_hat)
+                ) +
+                MetricCalculator.criterion_adv(
+                    dc_x_hat,
+                    torch.zeros_like(dc_x_hat),
+                )
+            )
+
+            du_x_r = self.uncond_discriminator(x_r)
+            dc_x_r = self.cond_discriminator(
+                x_r,
+                s_r.clone().detach(),
+            )
+            loss_adv_r = (
+                MetricCalculator.criterion_adv(du_x_r, torch.zeros_like(du_x_r)) +
+                MetricCalculator.criterion_adv(dc_x_r, torch.zeros_like(dc_x_r))
+            )
+            du_x = self.uncond_discriminator(x)
+            dc_x = self.cond_discriminator(
+                x,
+                s.clone().detach(),
+            )
+            loss_adv_real = (
+                MetricCalculator.criterion_adv(du_x, torch.ones_like(du_x)) +
+                MetricCalculator.criterion_adv(dc_x, torch.ones_like(dc_x))
+            )
+
+            loss = loss_adv_hat + loss_adv_r + loss_add_real
+
+            info = {
+                'loss': loss,
+            }
+
+            return info
+
 
     def validation_step(
             self,
