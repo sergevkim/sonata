@@ -119,7 +119,10 @@ def AdaIN(content_feat, style_feat):
     smean, sstd = get_adastats(style_feat)
     cmean, cstd = get_adastats(content_feat)
     csize = content_feat.size()
-    norm_content = (content_feat - cmean.expand(csize)) / cstd.expand(csize)
+    norm_content = (
+        (content_feat - cmean.expand(csize)) /
+        (cstd.expand(csize) + 1e-3)
+    )
 
     return norm_content * sstd.expand(csize) + smean.expand(csize)
 

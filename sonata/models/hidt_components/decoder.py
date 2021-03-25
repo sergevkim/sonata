@@ -82,4 +82,5 @@ if __name__ == '__main__':
         torch.randn(4, 128, 64, 64),
     ]
     outputs = model(inputs, style, hooks)
-    print(outputs.shape)
+    print(outputs[0].shape, outputs[1])
+    print(outputs[0])

@@ -25,6 +25,8 @@ class HiDTModel(BaseModule):
         ):
         super().__init__()
         self.device = device
+        self.learning_rate = learning_rate
+        self.verbose = verbose
 
         self.content_encoder = ContentEncoder()
         self.style_encoder = StyleEncoder()
@@ -55,9 +57,9 @@ class HiDTModel(BaseModule):
             batch_idx,
             optimizer_idx,
         ):
-        x = batch
+        x, x_prime = batch
         x = x.to(self.device)
-        x_prime = x.to(self.device) #TODO think about sampling
+        x_prime = x_prime.to(self.device)
 
         if optimizer_idx == 0: #generator step
             #autoencoding branch
@@ -78,6 +80,7 @@ class HiDTModel(BaseModule):
                 style=s_prime,
                 hooks=h,
             )
+            #TODO remove print(c.shape, s_prime.shape, h)
 
             loss_seg = 0#self.criterion_seg(m_hat, m)
             c_hat, h_hat = self.content_encoder(x_hat)
@@ -153,19 +156,33 @@ class HiDTModel(BaseModule):
             loss_terms = [
                 loss_adv + loss_adv_r,
                 loss_rec + loss_rec_r + loss_cyc,
-                loss_seg + loss_seg_r,
+                #loss_seg + loss_seg_r,
                 loss_c + loss_c_r,
                 loss_s,
                 loss_s_r,
                 loss_dist,
             ]
-            lambdas = [1/7 for i in range(7)]
+            k = len(loss_terms)
+            for loss_term in loss_terms:
+                print(loss_term.item())
+            lambdas = [
+                5,
+                2,
+                1,
+                0.1,
+                4,
+                1,
+            ] #TODO seg
 
             loss = 0
-            for i in range(7):
+            for i in range(k):
                 loss += lambdas[i] * loss_terms[i]
 
-            return loss
+            info = {
+                'loss': loss,
+            }
+
+            return info
 
         if optimizer_idx == 1: #discriminator step
             pass
@@ -186,12 +203,24 @@ class HiDTModel(BaseModule):
     def configure_optimizers(
             self,
         ):
-        optimizer = Adam(
-            params=self.generator.parameters(), # TODO union params with encoders params
+        params_g = list(self.generator.parameters()) + \
+            list(self.content_encoder.parameters()) + \
+            list(self.style_encoder.parameters())
+        optimizer_g = Adam(
+            params=params_g,
+            lr=self.learning_rate,
+        )
+        params_d = list(self.cond_discriminator.parameters()) + \
+            list(self.uncond_discriminator.parameters())
+        optimizer_d = Adam(
+            params=params_d,
             lr=self.learning_rate,
         )
 
-        return [optimizer], []
+        optimizers = [optimizer_g, optimizer_d]
+        schedulers = []
+
+        return optimizers, schedulers
 
 
 if __name__ == '__main__':

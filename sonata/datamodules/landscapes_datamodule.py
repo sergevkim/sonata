@@ -1,4 +1,5 @@
 from pathlib import Path
+from random import randint
 from typing import List
 
 import cv2
@@ -39,7 +40,15 @@ class LandscapesDataset(Dataset):
         if self.transform:
             image = self.transform(image=image)['image']
 
-        return image
+        random_idx = randint(0, len(self.filenames))
+        random_filename = self.filenames[random_idx]
+        random_image = cv2.imread(random_filename)
+        random_image = cv2.cvtColor(random_image, cv2.COLOR_BGR2RGB)
+
+        if self.transform:
+            random_image = self.transform(image=random_image)['image']
+
+        return image, random_image
 
 
 class LandscapesDataModule(BaseDataModule):

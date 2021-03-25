@@ -7,7 +7,7 @@ from sonata.models import HiDTModel
 from sonata.trainer import Trainer
 from sonata.utils.randomer import Randomer
 
-from configs.sonata_config import (
+from configs.hidt_config import (
     CommonArguments,
     DataArguments,
     TrainArguments,
@@ -35,7 +35,7 @@ def main(args):
     )
 
     logger = NeptuneLogger(
-        api_key=args.neptune_api_token,
+        api_token=args.neptune_api_token,
         project_name=args.neptune_project_name,
         experiment_name=args.neptune_experiment_name,
     )
