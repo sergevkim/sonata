@@ -177,6 +177,9 @@ class HiDTModel(BaseModule):
 
             info = {
                 'loss': loss,
+                'g_loss': loss,
+                'g_rec_loss': loss_terms[1],
+                'g_dist_loss': loss_terms[-1],
             }
 
             return info
@@ -275,6 +278,7 @@ class HiDTModel(BaseModule):
 
             info = {
                 'loss': loss,
+                'd_loss': loss,
             }
 
             return info
