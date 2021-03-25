@@ -51,16 +51,16 @@ class ImgGenerator(nn.Module):
         
         self.encoder = nn.Sequential(
             Block1d(1, 32, 3, stride=2),
-            Block1d(32, 16, 3, stride=2),
-            Block1d(16, 16, 3, stride=2),
-            Block1d(16, 16, 3, stride=1).conv,
+            Block1d(32, 64, 3, stride=2),
+            Block1d(64, 128, 3, stride=2),
+            Block1d(128, 256, 3, stride=1).conv,
             nn.Unflatten(dim=2, unflattened_size=torch.Size([bottleneck_shape, bottleneck_shape]))
         )
 
         self.decoder = nn.Sequential(
-            Block2d(16, 16, 3, upsample=True),
-            Block2d(16, 16, 3, upsample=True),
-            Block2d(16, 32, 3, upsample=True),
+            Block2d(256, 128, 3, upsample=True),
+            Block2d(128, 64, 3, upsample=True),
+            Block2d(64, 32, 3, upsample=True),
             Block2d(32, 3, 3).conv,
         )
 
@@ -78,16 +78,16 @@ class WavGenerator(nn.Module):
         
         self.encoder = nn.Sequential(
             Block2d(3, 32, 3, stride=2),
-            Block2d(32, 16, 3, stride=2),
-            Block2d(16, 16, 3, stride=2),
-            Block2d(16, 16, 3, stride=1).conv,
+            Block2d(32, 64, 3, stride=2),
+            Block2d(64, 128, 3, stride=2),
+            Block2d(128, 256, 3, stride=1).conv,
             nn.Flatten(start_dim=2),
         )
 
         self.decoder = nn.Sequential(
-            Block1d(16, 16, 3, upsample=True),
-            Block1d(16, 16, 3, upsample=True),
-            Block1d(16, 32, 3, upsample=True),
+            Block1d(256, 128, 3, upsample=True),
+            Block1d(128, 64, 3, upsample=True),
+            Block1d(64, 32, 3, upsample=True),
             Block1d(32, 1, 3).conv,
         )
 
@@ -97,7 +97,6 @@ class WavGenerator(nn.Module):
         wav = self.decoder(emb)
         wav = torch.tanh(wav)
         
-        print(wav.shape)
         return wav
 
 class ImgDiscriminator(nn.Module):
@@ -122,7 +121,7 @@ class ImgDiscriminator(nn.Module):
         emb = emb.view(x.size(0), -1)
         logits = self.clf(emb)
 
-        return logits
+        return logits.squeeze(-1)
 
 class WavDiscriminator(nn.Module):
     def __init__(self):
@@ -146,7 +145,7 @@ class WavDiscriminator(nn.Module):
         emb = emb.view(x.size(0), -1)
         logits = self.clf(emb)
 
-        return logits
+        return logits.squeeze(-1)
 
 class CycleGANModel(BaseModule):
     def __init__(
@@ -160,13 +159,14 @@ class CycleGANModel(BaseModule):
         ):
         super().__init__()
         self.device = device
+        self.learning_rate = learning_rate
         self.img_rec_lambda = img_rec_lambda
         self.wav_rec_lambda = wav_rec_lambda
 
-        self.img2wav_G = WavGenerator().to(device)
-        self.wav2img_G = ImgGenerator(wav_shape).to(device)
-        self.img2wav_D = WavDiscriminator().to(device)
-        self.wav2img_D = ImgDiscriminator().to(device)
+        self.img2wav_G = WavGenerator()
+        self.wav2img_G = ImgGenerator(wav_shape)
+        self.img2wav_D = WavDiscriminator()
+        self.wav2img_D = ImgDiscriminator()
 
         self.criterion_GAN = nn.BCEWithLogitsLoss()
         self.criterion_cycle = nn.L1Loss()
@@ -213,36 +213,41 @@ class CycleGANModel(BaseModule):
         rec_wav = self.img2wav_G(fake_img)
         rec_img = self.wav2img_G(fake_wav)
 
-        self.set_requires_grad([self.img2wav_D, self.wav2img_D], False)
-        self.optimizer_G.zero_grad()
+        if optimizer_idx == 0:
+            self.set_requires_grad([self.img2wav_D, self.wav2img_D], False)
 
-        loss_img2wav_G = self.criterion_GAN(self.img2wav_D(fake_wav), ones)
-        loss_wav2img_G = self.criterion_GAN(self.wav2img_D(fake_img), ones)
-        loss_img_rec_cycle = self.img_rec_lambda * self.criterion_cycle(rec_img, img)
-        loss_wav_rec_cycle = self.wav_rec_lambda * self.criterion_cycle(rec_wav, wav)
-        
-        loss_G = loss_img2wav_G + loss_wav2img_G + loss_img_rec_cycle + loss_wav_rec_cycle
+            loss_img2wav_G = self.criterion_GAN(self.img2wav_D(fake_wav), ones)
+            loss_wav2img_G = self.criterion_GAN(self.wav2img_D(fake_img), ones)
+            loss_img_rec_cycle = self.img_rec_lambda * self.criterion_cycle(rec_img, img)
+            loss_wav_rec_cycle = self.wav_rec_lambda * self.criterion_cycle(rec_wav, wav)
+            
+            loss_G = loss_img2wav_G + loss_wav2img_G + loss_img_rec_cycle + loss_wav_rec_cycle
+            
+            info = {
+                'loss': loss_G,
+                'loss_G': loss_G
+            }
 
-        loss_G.backward()
-        self.optimizer_G.step()
+            return info
+        else:
+            self.set_requires_grad([self.img2wav_D, self.wav2img_D], True)
 
-        self.set_requires_grad([self.img2wav_D, self.wav2img_D], True)
-        self.optimizer_D.zero_grad()
+            loss_img2wav_D_fake = self.criterion_GAN(self.img2wav_D(fake_wav.detach()), zeros)
+            loss_img2wav_D_real = self.criterion_GAN(self.img2wav_D(wav), ones)
+            loss_wav2img_D_fake = self.criterion_GAN(self.wav2img_D(fake_img.detach()), zeros)
+            loss_wav2img_D_real = self.criterion_GAN(self.wav2img_D(img), ones)
+            
+            loss_img2wav_D = (loss_img2wav_D_fake + loss_img2wav_D_real) / 2
+            loss_wav2img_D = (loss_wav2img_D_fake + loss_wav2img_D_real) / 2
 
-        loss_img2wav_D_fake = self.criterion_GAN(self.img2wav_D(fake_wav.detach()), zeros)
-        loss_img2wav_D_real = self.criterion_GAN(self.img2wav_D(wav), ones)
-        loss_wav2img_D_fake = self.criterion_GAN(self.img2wav_D(fake_img.detach()), zeros)
-        loss_wav2img_D_real = self.criterion_GAN(self.wav2img_D(img), ones)
-        
-        loss_img2wav_D = (loss_img2wav_D_fake + loss_img2wav_D_real) / 2
-        loss_wav2img_D = (loss_wav2img_D_fake + loss_wav2img_D_real) / 2
+            loss_D = loss_img2wav_D + loss_wav2img_D
 
-        loss_D = loss_img2wav_D + loss_wav2img_D
+            info = {
+                'loss': loss_D,
+                'loss_D': loss_D
+            }
 
-        loss_D.backward()
-        self.optimizer_D.step()
-
-        return [loss_G, loss_D]
+            return info
 
     def validation_step(
             self,
@@ -250,34 +255,34 @@ class CycleGANModel(BaseModule):
             batch_idx,
         ):
 
-        losses = self.training_step(
+        loss = self.training_step(
             batch=batch,
             batch_idx=batch_idx,
             optimizer_idx=0,
         )
 
-        return losses
+        return loss
 
     def configure_optimizers(
             self
         ):
         
-        self.optimizer_G = Adam(itertools.chain(self.img2wav_G.parameters(), self.wav2img_G.parameters()), lr=self.learning_rate)
-        self.optimizer_D = Adam(itertools.chain(self.nimg2wav_D.parameters(), self.wav2img_D.parameters()), lr=self.learning_rate)
+        optimizer_G = Adam(itertools.chain(self.img2wav_G.parameters(), self.wav2img_G.parameters()), lr=self.learning_rate)
+        optimizer_D = Adam(itertools.chain(self.img2wav_D.parameters(), self.wav2img_D.parameters()), lr=self.learning_rate)
 
-        return [self.optimizer_G, self.optimizer_D], []
+        return [optimizer_G, optimizer_D], []
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     
-    model = CycleGANModel()
-    n_params = ParametersCounter.count(
-        model=model,
-        trainable=True,
-    )
-    #pdb.set_trace()
-    print(n_params)
+#     model = CycleGANModel()
+#     n_params = ParametersCounter.count(
+#         model=model,
+#         trainable=True,
+#     )
+#     #pdb.set_trace()
+#     print(n_params)
 
-    inputs = (torch.randn(4, 3, IMG_SHAPE, IMG_SHAPE), torch.randn(4, 1, WAV_SHAPE))    
-    outputs = model(inputs)
-    print(outputs.shape)
+#     inputs = (torch.randn(4, 3, IMG_SHAPE, IMG_SHAPE), torch.randn(4, 1, WAV_SHAPE))    
+#     outputs = model(inputs)
+#     print(outputs.shape)
 
