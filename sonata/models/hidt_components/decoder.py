@@ -62,7 +62,7 @@ class Decoder(Module):
         x = self.conv_block_6(x)
         x = self.ada_res_block_7(x, style, hooks[0])
 
-        return x
+        return x, None
 
 
 if __name__ == '__main__':
@@ -82,4 +82,5 @@ if __name__ == '__main__':
         torch.randn(4, 128, 64, 64),
     ]
     outputs = model(inputs, style, hooks)
-    print(outputs.shape)
+    print(outputs[0].shape, outputs[1])
+    print(outputs[0])

@@ -1,4 +1,3 @@
-from collections import defaultdict
 from pathlib import Path
 from typing import List, Optional
 
@@ -79,7 +78,6 @@ class Trainer:
             epoch_idx: int,
         ) -> None:
         model.train()
-        metrics = defaultdict(list)
 
         for batch_idx, batch in enumerate(tqdm.tqdm(train_dataloader)):
             for optimizer_idx, optimizer in enumerate(optimizers):
@@ -90,10 +88,13 @@ class Trainer:
                 )
 
                 for metric_name, value in info.items():
-                    if type(value) is Tensor:
-                        metrics[metric_name].append(value.item())
-                    else:
-                        metrics[metric_name].append(value)
+                    if self.logger is not None:
+                        if type(value) is Tensor:
+                            value = value.item()
+                        self.logger.log_metric(
+                            metric_name=f'train/{metric_name}',
+                            metric_value=value,
+                        )
 
                 loss = info['loss']
                 loss.backward()
@@ -107,17 +108,8 @@ class Trainer:
             model.training_step_end(batch_idx=batch_idx)
 
             if self.one_batch_overfit:
+                print('Warning! One batch overfitting! To disable it, add --one_batch_overfit=0')
                 break
-
-        for metric_name, values in metrics.items():
-            mean_value = sum(values) / len(values)
-            if self.logger is not None:
-                self.logger.log_metric(
-                    metric_name=f'train/{metric_name}',
-                    metric_value=mean_value,
-                )
-            if self.verbose:
-                print(f'{metric_name}: {mean_value}')
 
         model.training_epoch_end(epoch_idx=epoch_idx)
 
@@ -130,7 +122,6 @@ class Trainer:
             epoch_idx: int,
         ) -> None:
         model.eval()
-        metrics = defaultdict(list)
 
         for batch_idx, batch in enumerate(tqdm.tqdm(val_dataloader)):
             info = model.validation_step(
@@ -140,22 +131,14 @@ class Trainer:
 
             for metric_name, value in info.items():
                 if type(value) is Tensor:
-                    metrics[metric_name].append(value.item())
-                else:
-                    metrics[metric_name].append(value)
+                    value = value.item()
+                if self.logger is not None:
+                    self.logger.log_metric(
+                        metric_name=f'val/{metric_name}',
+                        metric_value=value,
+                    )
 
-            loss = info['loss']
             model.validation_step_end(batch_idx=batch_idx)
-
-        for metric_name, values in metrics.items():
-            mean_value = sum(values) / len(values)
-            if self.logger is not None:
-                self.logger.log_metric(
-                    metric_name=f'val/{metric_name}',
-                    metric_value=mean_value,
-                )
-            if self.verbose:
-                print(f'{metric_name}: {mean_value}')
 
         for scheduler in schedulers:
             scheduler.step()
@@ -232,4 +215,3 @@ if __name__ == '__main__':
         version='0',
     )
     print('Done!')
-

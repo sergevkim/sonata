@@ -16,22 +16,45 @@ class ConditionalDiscriminator(Module):
         super().__init__()
         self.num_feat = num_feat
         self.activation = ReLU()
-        self.blocks = [
-            ConvBlock(3, num_feat)
-        ]
-        self.blocks.extend([
-            Sequential(
-                ResBlock(
-                    num_feat*(2**i),
-                    num_feat*(2**i),
-                ),
-                ConvBlock(
-                    num_feat*(2**i),
-                    num_feat*(2**(i+1)),
-                    stride=2,
-                ),
-            ) for i in range(4)
-        ])
+        self.block_1 = ConvBlock(3, num_feat)
+        self.blocks = Sequential(
+            ResBlock(
+                num_feat,
+                num_feat,
+            ),
+            ConvBlock(
+                num_feat,
+                num_feat*(2**1),
+                stride=2,
+            ),
+            ResBlock(
+                num_feat*(2**1),
+                num_feat*(2**1),
+            ),
+            ConvBlock(
+                num_feat*(2**1),
+                num_feat*(2**2),
+                stride=2,
+            ),
+            ResBlock(
+                num_feat*(2**2),
+                num_feat*(2**2),
+            ),
+            ConvBlock(
+                num_feat*(2**2),
+                num_feat*(2**3),
+                stride=2,
+            ),
+            ResBlock(
+                num_feat*(2**3),
+                num_feat*(2**3),
+            ),
+            ConvBlock(
+                num_feat*(2**3),
+                num_feat*(2**4),
+                stride=2,
+            ),
+        )
 
         self.l6 = torch.nn.utils.spectral_norm(
             Linear(num_feat * 16, 1)
@@ -48,8 +71,8 @@ class ConditionalDiscriminator(Module):
             torch.nn.init.xavier_uniform_(optional_l_y.weight.data)
 
     def forward(self, x, y=None):
-        for block in self.blocks:
-            x = block(x)
+        x = self.block_1(x)
+        x = self.blocks(x)
 
         h = self.activation(x)
         h = torch.sum(h, dim=(2, 3))

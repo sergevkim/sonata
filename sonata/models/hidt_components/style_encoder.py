@@ -64,4 +64,5 @@ if __name__ == '__main__':
     inputs = torch.randn(4, 3, 256, 256)
     outputs = model(inputs)
     print(outputs.shape)
+    print(outputs)
 
